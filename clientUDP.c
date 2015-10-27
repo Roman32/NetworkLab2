@@ -40,7 +40,14 @@ int main(int argc, char  *argv[]){
 	server_add.sin_port = htons(portNum);
 
 	int conntection =connect(sock,(struct sockaddr*)&server_add,sizeof(struct sockaddr_in));
-
+	if(connection < 0){
+		printf("\nError connecting!\n");
+		exit(0);
+	}
+	strcpy(request,"GET ");
+	strcat(request,argv[2]);
+	printf("%s\n",request);
+	 
 
 	return 0;
 	
