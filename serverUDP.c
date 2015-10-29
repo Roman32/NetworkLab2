@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 /*Authors: Eric Olson and Roman Claprood
 Project: Lab2 Client/Server UDP with RDT 3.0
@@ -10,6 +12,7 @@ Due Date: November 4, 2015
 */
 
 void getFileName();
+void getAndSendFile();
 
 int main(int argc, char *argv[])
 {
@@ -45,6 +48,8 @@ int main(int argc, char *argv[])
 	while(1){
 		length = sizeof(client);
 		check = recvfrom(sock,request,256,0,(struct sockaddr*)&client,&length);
+		getFileName(request,filename);
+		getAndSendFile(sock,filename,client,length);
 
 	}
 
@@ -56,6 +61,7 @@ void getFileName(char request[],char filename[]){
 	int i = 0;
 	char *strArray[50];
 	char *token = strtok(request, " \n\r");
+
 	//pares the message
 	while(token != NULL){
 		strArray[i] = malloc(strlen(token)+1);
@@ -63,7 +69,36 @@ void getFileName(char request[],char filename[]){
 		i++;
 		token = strtok(NULL, " \n\r");
 	}
-	strcpy(filename,strArray[i]);
+	strcpy(filename,strArray[1]);
+}
+
+//Used to find file and send file to client
+void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t length){
+	char packet[1000];
+	int size,maxSeqNum,sentBytes,packetNum = 0;
+	struct stat fsize;
+
+	//Checks if file is available
+	if(access(filename,F_OK)!= -1){
+		FILE *file =fopen(filename,"r");
+
+		stat(filename,&fsize);
+		size = fsize.st_size;
+		//find total # of packets needed for file
+		maxSeqNum = size / 1000;
+		
+		sentBytes = 0;
+		//Sends the packets
+		while(sentBytes < size){
+			fread(packet,1,1000,file);
+			sentBytes += sendto(sock,packet,1000,0,(struct sockaddr*)&client,length);
+			packetNum++;
+		}
+		fclose(file);
+		close(sock);
+	}else {
+		printf("File Not Found");
+	}
 }
 
 
