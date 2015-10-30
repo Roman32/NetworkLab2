@@ -28,14 +28,14 @@ int main(int argc, char  *argv[]){
 	portNum = atoi(argv[2]);
 	prob = atoi(argv[4]);
 
-	sock = socket(AF_INET,SOCK_DGRAM, 0);
+	sock = socket(PF_INET,SOCK_DGRAM, 0);
 	if(sock < 0){
 		printf("Error opening the socket!");
 		exit(0);
 	}
 
 	server_add.sin_family = AF_INET;
-	inet_pton(AF_INET, argv[1], &server_add.sin_addr);
+	inet_pton(PF_INET, argv[1], &server_add.sin_addr);
 	server_add.sin_port = htons(portNum);
 
 	connection = connect(sock,(struct sockaddr*)&server_add,sizeof(struct sockaddr_in));
@@ -47,8 +47,8 @@ int main(int argc, char  *argv[]){
 	strcpy(request, argv[3]);
 	//strcat(request,argv[]);
 	
-	if(sendto(sock, request, strlen(request), 0, (struct sockaddr*)&server_add, sizeof(server_add)) < 0){
-	 	printf("Error writing to socket");
+	if(write(sock, request, strlen(request), 0, (struct sockaddr*)&server_add, sizeof(server_add)) < 0){
+	 	printf("Error writing to socket\n");
 	 	exit(0);
 	}
 
@@ -60,7 +60,7 @@ int main(int argc, char  *argv[]){
 	recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
 	int totSeq = atoi((buffer+1));
 
-	FILE* fp = fopen(argv[3], "w");
+	FILE* fp = fopen(/*argv[3]*/"copytest.txt", "w");
 
 	srand(time(NULL));
 	int r = rand() % 100; //between 0 and 99
@@ -71,7 +71,7 @@ int main(int argc, char  *argv[]){
 			putc(buffer[i], fp);
 		} 
 	} else {
-			printf("Packet %d dropped.", buffer[0]);
+			printf("Packet %d dropped.\n", buffer[0]);
 	}
 	//This is set up to write the packet contents to the file no matter if it is out of order. Can be changed. 
 	for (i = 1; i < totSeq; i++) {
@@ -84,7 +84,7 @@ int main(int argc, char  *argv[]){
 				putc(buffer[i], fp);
 			} 
 		} else {
-				printf("Packet %d dropped.", buffer[0]);
+				printf("Packet %d dropped.\n", buffer[0]);
 		}
 	}
 
