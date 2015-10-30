@@ -70,14 +70,18 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		sentBytes = 0;
 		//Sends the packets
 		//sendto(sock,"packet",1000,0,(struct sockaddr*)&client,length);
-		while(sentBytes <= size){
-			packet[0] = packetNum;
-			packet[1] = maxSeqNum;
-			//printf("pack number is: %d and max is: %d\n",packet[0],packet[1]);
+		while(sentBytes < size){
+			packet[0] = packetNum % 2;
+			if(packetNum < maxSeqNum){
+				packet[1] = 0;
+			}else{
+				packet[1] = 1;
+			}
+			printf("pack number is: %d and max is: %d\n",packet[0],packet[1]);
 			fread(packet,1,1000,file);
-			printf("%s\n",packet);
+			//printf("%s\n",packet);
 			sentBytes += sendto(sock,packet,sizeof(packet),0,(struct sockaddr*)&client,length);
-			//printf("%d\n", sentBytes);
+			printf("%d\n", sentBytes);
 			packetNum++;
 			bzero(packet,sizeof(packet));
 		}

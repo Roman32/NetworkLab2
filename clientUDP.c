@@ -16,7 +16,11 @@ Due Date: November 4, 2015
 
 
 int main(int argc, char  *argv[]){
-	int sock, portNum, prob, connection, packCount = 0, endFlag = 0, currPack = 0;
+	int sock, portNum, prob, connection;
+	int packCount = 0;
+	int endFlag = 0;
+	int currPack = 0;
+	int r=0;
 	struct sockaddr_in server_add;
 	char request[50];
 
@@ -58,7 +62,7 @@ int main(int argc, char  *argv[]){
 	recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
 	char newfile[50]="copy";
 	strcat(newfile,argv[3]);
-	FILE* fp = fopen(newfile, "rb+");
+	FILE* fp = fopen(newfile, "w+");
 
 	/*
 	In the following portion of the code, we continuously receive packets from the server until we see that 
@@ -67,9 +71,9 @@ int main(int argc, char  *argv[]){
 	*/
 	while (endFlag == 0) {
 		recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0);
-		char endflag = buffer[1] - '0'; //little trick I picked up back in 'nam to get the numerical value of a char
+		endFlag = buffer[1] - '0'; //little trick I picked up back in 'nam to get the numerical value of a char
 		currPack++;
-		int r = rand() % 100;
+		r = rand() % 100;
 		if(r > prob) {
 			packCount++;
 			int i;
