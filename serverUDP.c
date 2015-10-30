@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in server,client;
 	socklen_t length;
 	char request[50];
-
+	memset(request,0,sizeof(request));
 	if (argc < 2){
 		printf("Error, please give a port!\n");
 		exit(1);
@@ -41,11 +41,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	while(1){
+	
 		length = sizeof(client);
 		check = recvfrom(sock,request,50,0,(struct sockaddr*)&client,&length);		
 		getAndSendFile(sock,request,client,length);
-	}
+	
 	
 
 	return 0;
@@ -58,6 +58,7 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 	char packet[1000];
 	int size,maxSeqNum,sentBytes,packetNum = 0;
 	struct stat fsize;
+	printf("%s\n",filename);
 	//Checks if file is available
 	if(access(filename,F_OK)!= -1){
 		FILE *file =fopen(filename,"rb");
@@ -70,7 +71,7 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		sentBytes = 0;
 		//Sends the packets
 		//sendto(sock,"packet",1000,0,(struct sockaddr*)&client,length);
-		while(sentBytes < size && packetNum < maxSeqNum){
+		while(sentBytes <= size){
 			fread(packet,1,1000,file);
 			sentBytes += sendto(sock,packet,1000,0,(struct sockaddr*)&client,length);
 			printf("%d\n", sentBytes);

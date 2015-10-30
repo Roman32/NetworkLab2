@@ -18,7 +18,7 @@ Due Date: November 4, 2015
 int main(int argc, char  *argv[]){
 	int i, sock, portNum, prob, connection, packCount = 0;
 	struct sockaddr_in server_add;
-	char request[256];
+	char request[50];
 
 	if(argc < 4){
 		printf("Invalid number of arguements! Needs to be IP address, portNumber, filename, probability");
@@ -45,10 +45,13 @@ int main(int argc, char  *argv[]){
 	}
 
 	strcpy(request, argv[3]);
-	//strcat(request,argv[]);
+	//printf("%s",request);
 	
-	if(write(sock, request, strlen(request), 0, (struct sockaddr*)&server_add, sizeof(server_add)) < 0){
-	 	printf("Error writing to socket\n");
+	//if(write(sock, request, strlen(request), 0, (struct sockaddr*)&server_add, sizeof(server_add)) < 0){
+	 	//printf("Error writing to socket\n");
+
+	if(write(sock, request, strlen(request)) < 0){
+	 	printf("Error writing to socket");
 	 	exit(0);
 	}
 
@@ -59,8 +62,10 @@ int main(int argc, char  *argv[]){
 	char buffer[1048];
 	recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
 	int totSeq = atoi((buffer+1));
-
-	FILE* fp = fopen(/*argv[3]*/"copytest.txt", "w");
+	//FILE* fp = fopen(/*argv[3]*/"copytest.txt", "w");
+	char newfile[50]="copy";
+	strcat(newfile,argv[3]);
+	FILE* fp = fopen(newfile, "w");
 
 	srand(time(NULL));
 	int r = rand() % 100; //between 0 and 99
