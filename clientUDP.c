@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <time.h>
+#include <stdlib.h>
 
 
 /*
@@ -14,49 +16,81 @@ Due Date: November 4, 2015
 
 
 int main(int argc, char  *argv[]){
-	int sock;
-	int portNum,check;
+	int i, sock, portNum, prob, connection, packCount = 0;
 	struct sockaddr_in server_add;
-
 	char request[256];
-	//correct arguement check
-	if(argc < 3){
-		printf("Invalid number of arguements! Needs to be IP address/portNumber filename");
+
+	if(argc < 4){
+		printf("Invalid number of arguements! Needs to be IP address, portNumber, filename, probability");
 		exit(0);
 	}
 
 	portNum = atoi(argv[2]);
-	sock = socket(PF_INET,SOCK_DGRAM, 0);
+	prob = atoi(argv[4]);
+
+	sock = socket(AF_INET,SOCK_DGRAM, 0);
 	if(sock < 0){
 		printf("Error opening the socket!");
 		exit(0);
 	}
 
-	/*sets up the connection for the server.  Different from the 
-	the example in class. Used this in the minilab with TCP.
-	*/
-	server_add.sin_family = PF_INET;
-	inet_pton(PF_INET,argv[1],&server_add.sin_addr);
+	server_add.sin_family = AF_INET;
+	inet_pton(AF_INET, argv[1], &server_add.sin_addr);
 	server_add.sin_port = htons(portNum);
 
-	int connection =connect(sock,(struct sockaddr*)&server_add,sizeof(struct sockaddr_in));
+	connection = connect(sock,(struct sockaddr*)&server_add,sizeof(struct sockaddr_in));
 	if(connection < 0){
 		printf("\nError connecting!\n");
 		exit(0);
 	}
-	//Start to build request message. Will need to add more.
-	strcpy(request,"GET ");
-	strcat(request,argv[2]);
+
+	strcpy(request, argv[3]);
+	//strcat(request,argv[]);
 	
-	//Sends the request to the server.
-	check = sendto(sock,request,strlen(request),0,(struct sockaddr*)&server_add,sizeof(server_add));
-	if(check <0){
+	if(sendto(sock, request, strlen(request), 0, (struct sockaddr*)&server_add, sizeof(server_add)) < 0){
 	 	printf("Error writing to socket");
 	 	exit(0);
 	}
 
+	/*Here we receive the first packet from the server and obtain the total sequence number from its
+	header so that we know how many packets to be expecting. Then, for each packet received, we roll
+	the dice to see if we keep it or drop it.
+	*/
+	char buffer[1048];
+	recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
+	int totSeq = atoi((buffer+1));
 
+	FILE* fp = fopen(argv[3], "w");
 
+	srand(time(NULL));
+	int r = rand() % 100; //between 0 and 99
+	if(r > prob) {
+		packCount++;
+		printf("Packet %d accepted.\n", buffer[0]);
+		for (i = 2; i < strlen(buffer); i++) {
+			putc(buffer[i], fp);
+		} 
+	} else {
+			printf("Packet %d dropped.", buffer[0]);
+	}
+	//This is set up to write the packet contents to the file no matter if it is out of order. Can be changed. 
+	for (i = 1; i < totSeq; i++) {
+		recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0);
+		r = rand() % 100;
+		if(r > prob) {
+			packCount++;
+			printf("Packet %d accepted.\n", buffer[0]);
+			for (i = 2; i < strlen(buffer); i++) {
+				putc(buffer[i], fp);
+			} 
+		} else {
+				printf("Packet %d dropped.", buffer[0]);
+		}
+	}
+
+	printf("Received %d out of %d packets\n", packCount, totSeq);
+
+	fclose(fp);
 	close(sock);
 	return 0;
 	
