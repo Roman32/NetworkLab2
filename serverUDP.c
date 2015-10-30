@@ -41,12 +41,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	
-		length = sizeof(client);
-		check = recvfrom(sock,request,50,0,(struct sockaddr*)&client,&length);		
-		getAndSendFile(sock,request,client,length);
-	
-	
+	//had while loop around here, but wasnt working.
+	length = sizeof(client);
+	check = recvfrom(sock,request,sizeof(request),0,(struct sockaddr*)&client,&length);		
+	getAndSendFile(sock,request,client,length);	
 
 	return 0;
 }
@@ -55,7 +53,7 @@ int main(int argc, char *argv[])
 
 //Used to find file and send file to client
 void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t length){
-	char packet[1000];
+	char packet[1002];
 	int size,maxSeqNum,sentBytes,packetNum = 0;
 	struct stat fsize;
 	printf("%s\n",filename);
@@ -67,15 +65,21 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		size = fsize.st_size;
 		//find total # of packets needed for file
 		maxSeqNum = size / 1000;
+		//maxSeqNum++; //get last remaining bytes.
 		
 		sentBytes = 0;
 		//Sends the packets
 		//sendto(sock,"packet",1000,0,(struct sockaddr*)&client,length);
 		while(sentBytes <= size){
+			packet[0] = packetNum;
+			packet[1] = maxSeqNum;
+			//printf("pack number is: %d and max is: %d\n",packet[0],packet[1]);
 			fread(packet,1,1000,file);
-			sentBytes += sendto(sock,packet,1000,0,(struct sockaddr*)&client,length);
-			printf("%d\n", sentBytes);
+			printf("%s\n",packet);
+			sentBytes += sendto(sock,packet,sizeof(packet),0,(struct sockaddr*)&client,length);
+			//printf("%d\n", sentBytes);
 			packetNum++;
+			bzero(packet,sizeof(packet));
 		}
 		fclose(file);
 		close(sock);

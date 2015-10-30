@@ -61,7 +61,7 @@ int main(int argc, char  *argv[]){
 	int totSeq = atoi((buffer+1));
 	char newfile[50]="copy";
 	strcat(newfile,argv[3]);
-	FILE* fp = fopen(newfile, "w");
+	FILE* fp = fopen(newfile, "rb+");
 
 	srand(time(NULL));
 	int r = rand() % 100; //between 0 and 99
