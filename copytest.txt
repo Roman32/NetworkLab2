@@ -35,8 +35,5 @@ int main(int argc, char**argv)
 
 /*
  A simple client in the internet domain using TCP
-<<<<<<< HEAD
  Usage: ./client hðS
-=======
  Usage: ./client h°ñmÿ
->>>>>>> 85ce9806f178fa2ef0009c6e4061ee1e1f1e8318

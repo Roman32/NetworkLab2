@@ -67,11 +67,12 @@ int main(int argc, char  *argv[]){
 	*/
 	while (endFlag == 0) {
 		recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0);
-		endflag = buffer[1] - '0'; //little trick I picked up back in 'nam to get the numerical value of a char
+		char endflag = buffer[1] - '0'; //little trick I picked up back in 'nam to get the numerical value of a char
 		currPack++;
-		r = rand() % 100;
+		int r = rand() % 100;
 		if(r > prob) {
 			packCount++;
+			int i;
 			printf("Packet %d accepted.\n", currPack);
 			for (i = 2; i < strlen(buffer); i++) {
 				putc(buffer[i], fp);
