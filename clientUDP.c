@@ -16,7 +16,7 @@ Due Date: November 4, 2015
 
 
 int main(int argc, char  *argv[]){
-	int i, sock, portNum, prob, connection, packCount = 0;
+	int sock, portNum, prob, connection, packCount = 0, endFlag = 0, currPack = 0;
 	struct sockaddr_in server_add;
 	char request[50];
 
@@ -28,14 +28,14 @@ int main(int argc, char  *argv[]){
 	portNum = atoi(argv[2]);
 	prob = atoi(argv[4]);
 
-	sock = socket(AF_INET,SOCK_DGRAM, 0);
+	sock = socket(PF_INET,SOCK_DGRAM, 0);
 	if(sock < 0){
 		printf("Error opening the socket!");
 		exit(0);
 	}
 
 	server_add.sin_family = AF_INET;
-	inet_pton(AF_INET, argv[1], &server_add.sin_addr);
+	inet_pton(PF_INET, argv[1], &server_add.sin_addr);
 	server_add.sin_port = htons(portNum);
 
 	connection = connect(sock,(struct sockaddr*)&server_add,sizeof(struct sockaddr_in));
@@ -45,51 +45,43 @@ int main(int argc, char  *argv[]){
 	}
 
 	strcpy(request, argv[3]);
-	//printf("%s",request);
 	
+	//if(write(sock, request, strlen(request), 0, (struct sockaddr*)&server_add, sizeof(server_add)) < 0){
+	 	//printf("Error writing to socket\n");
+
 	if(write(sock, request, strlen(request)) < 0){
 	 	printf("Error writing to socket");
 	 	exit(0);
 	}
 
-	/*Here we receive the first packet from the server and obtain the total sequence number from its
-	header so that we know how many packets to be expecting. Then, for each packet received, we roll
-	the dice to see if we keep it or drop it.
-	*/
 	char buffer[1048];
 	recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
-	int totSeq = atoi((buffer+1));
 	char newfile[50]="copy";
 	strcat(newfile,argv[3]);
 	FILE* fp = fopen(newfile, "rb+");
 
-	srand(time(NULL));
-	int r = rand() % 100; //between 0 and 99
-	if(r > prob) {
-		packCount++;
-		printf("Packet %d accepted.\n", buffer[0]);
-		for (i = 2; i < strlen(buffer); i++) {
-			putc(buffer[i], fp);
-		} 
-	} else {
-			printf("Packet %d dropped.", buffer[0]);
-	}
-	//This is set up to write the packet contents to the file no matter if it is out of order. Can be changed. 
-	for (i = 1; i < totSeq; i++) {
+	/*
+	In the following portion of the code, we continuously receive packets from the server until we see that 
+	the "final packet" flag has been set to true. It is currently set up to write the packet contents to the
+	file even if they are out of order. This can be changed.
+	*/
+	while (endFlag == 0) {
 		recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0);
+		endflag = buffer[1] - '0'; //little trick I picked up back in 'nam to get the numerical value of a char
+		currPack++;
 		r = rand() % 100;
 		if(r > prob) {
 			packCount++;
-			printf("Packet %d accepted.\n", buffer[0]);
+			printf("Packet %d accepted.\n", currPack);
 			for (i = 2; i < strlen(buffer); i++) {
 				putc(buffer[i], fp);
 			} 
 		} else {
-				printf("Packet %d dropped.", buffer[0]);
+				printf("Packet %d dropped.\n", currPack);
 		}
 	}
 
-	printf("Received %d out of %d packets\n", packCount, totSeq);
+	printf("Received %d out of %d packets\n", packCount, currPack);
 
 	fclose(fp);
 	close(sock);
