@@ -19,10 +19,7 @@ int main(int argc, char *argv[])
 	int sock,check;
 	struct sockaddr_in server,client;
 	socklen_t length;
-	char request[256];
-	char header[256];
-	char filename[50];
-
+	char request[50];
 
 	if (argc < 2){
 		printf("Error, please give a port!\n");
@@ -32,7 +29,7 @@ int main(int argc, char *argv[])
 	sock = socket(PF_INET,SOCK_DGRAM,0);
 	if(sock < 0){
 		printf("Error opening socket!");
-		exit(0);
+		exit(1);
 	}
 
 	server.sin_family = PF_INET;
@@ -41,46 +38,29 @@ int main(int argc, char *argv[])
 
 	if(bind(sock,(struct sockaddr*)&server,sizeof(server)) < 0){
 		printf("Error binding socket!\n");
-		exit(0);
+		exit(1);
 	}
-
-	//Gets
+	
 	while(1){
 		length = sizeof(client);
-		check = recvfrom(sock,request,256,0,(struct sockaddr*)&client,&length);
-		getFileName(request,filename);
-		getAndSendFile(sock,filename,client,length);
-
+		check = recvfrom(sock,request,50,0,(struct sockaddr*)&client,&length);		
+		getAndSendFile(sock,request,client,length);
 	}
+	
 
 	return 0;
 }
 
-//Used to parse response to get file name
-void getFileName(char request[],char filename[]){
-	int i = 0;
-	char *strArray[50];
-	char *token = strtok(request, " \n\r");
 
-	//pares the message
-	while(token != NULL){
-		strArray[i] = malloc(strlen(token)+1);
-		strcpy(strArray[i],token);
-		i++;
-		token = strtok(NULL, " \n\r");
-	}
-	strcpy(filename,strArray[1]);
-}
 
 //Used to find file and send file to client
 void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t length){
 	char packet[1000];
 	int size,maxSeqNum,sentBytes,packetNum = 0;
 	struct stat fsize;
-
 	//Checks if file is available
 	if(access(filename,F_OK)!= -1){
-		FILE *file =fopen(filename,"r");
+		FILE *file =fopen(filename,"rb");
 
 		stat(filename,&fsize);
 		size = fsize.st_size;
@@ -89,15 +69,17 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		
 		sentBytes = 0;
 		//Sends the packets
-		while(sentBytes < size){
+		//sendto(sock,"packet",1000,0,(struct sockaddr*)&client,length);
+		while(sentBytes < size && packetNum < maxSeqNum){
 			fread(packet,1,1000,file);
 			sentBytes += sendto(sock,packet,1000,0,(struct sockaddr*)&client,length);
+			printf("%d\n", sentBytes);
 			packetNum++;
 		}
 		fclose(file);
 		close(sock);
 	}else {
-		printf("File Not Found");
+		printf("\nFile Not Found\n");
 	}
 }
 
