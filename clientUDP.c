@@ -14,6 +14,8 @@ Project: Lab 2 UDP server
 Due Date: November 4, 2015
 */
 
+void RDTSend();
+void RegularSend();
 
 int main(int argc, char  *argv[]){
 	int sock, portNum, prob, connection;
@@ -21,12 +23,21 @@ int main(int argc, char  *argv[]){
 	int endFlag = 0;
 	int currPack = 0;
 	int r=0;
+	int expected = 0;
+	int RDT = 0;
 	struct sockaddr_in server_add;
 	char request[50];
 
-	if(argc < 4){
+	if(argc < 5){
 		printf("Invalid number of arguements! Needs to be IP address, portNumber, filename, probability");
 		exit(0);
+	} else if (argc == 5) {
+		RDT = 0;
+	} else if (argc == 6) {
+		RDT = 1;
+	} else {
+		printf("Too many arguments\n");
+		exit(1);
 	}
 
 	portNum = atoi(argv[2]);
@@ -59,6 +70,7 @@ int main(int argc, char  *argv[]){
 	}
 
 	char buffer[1048];
+	char Ack[2];
 	//recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
 	char newfile[50]="copy";
 	strcat(newfile,argv[3]);
@@ -72,18 +84,20 @@ int main(int argc, char  *argv[]){
 	*/
 	while (endFlag == 0) {
 		memset(buffer,'\0',1048);
+		memset(Ack, '\0', 2);
 		recvfrom(sock, buffer, 1048, 0, 0, 0);
-		endFlag = buffer[1] - '0'; //little trick I picked up back in 'nam to get the numerical value of a char
-		printf("%d\n",endFlag);
+		endFlag = buffer[1] - '0'; 
 		currPack++;
 		r = rand() % 100;
 		if(r > prob) {
 			packCount++;
-			int i;
 			printf("Packet %d accepted.\n", currPack);
-			for (i = 2; i < strlen(buffer); i++) {
-				putc(buffer[i], fp);
-			} 
+			if (RDT == 1) {
+				RDTSend(buffer, &expected, Ack, &currPack, fp, &sock);
+			} else if (RDT == 0) {
+				RegularSend(buffer, fp);
+			}
+			expected = (expected + 1) % 2;
 		} else {
 				printf("Packet %d dropped.\n", currPack);
 		}
@@ -95,4 +109,33 @@ int main(int argc, char  *argv[]){
 	close(sock);
 	return 0;
 	
+}
+
+void RDTSend(char buffer[], int* expected, char Ack[], int* currPack, FILE* fp, int* sock) {
+	int i;
+	if (buffer[0] - '0' == *expected) {
+		for (i = 2; i < strlen(buffer); i++) {
+			putc(buffer[i], fp);
+		} 
+		Ack[0] = *expected + '0';
+		//send the ack
+		if(write(*sock, Ack, strlen(Ack)) < 0){
+	 	printf("Error writing to socket");
+	 	exit(0);
+	}
+	} else {
+		Ack[0] = ((*expected - 1) % 2) + '0';
+		//send Ack 
+		if(write(*sock, Ack, strlen(Ack)) < 0){
+	 	printf("Error writing to socket");
+	 	exit(0);
+	} 
+		*currPack = *currPack - 1;
+	}
+}
+void RegularSend(char buffer[], FILE* fp) {
+	int i;
+	for (i = 2; i < strlen(buffer); i++) {
+				putc(buffer[i], fp);
+			} 
 }
