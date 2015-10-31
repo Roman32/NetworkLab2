@@ -53,8 +53,12 @@ int main(int argc, char *argv[])
 
 //Used to find file and send file to client
 void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t length){
-	char packet[1002];
+	char contents[1001]; //one more for terminating null
+	char header[3];
+	char packet[1005];
+
 	int size,maxSeqNum,sentBytes,packetNum = 0;
+
 	struct stat fsize;
 	printf("%s\n",filename);
 	//Checks if file is available
@@ -71,19 +75,27 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		//Sends the packets
 		//sendto(sock,"packet",1000,0,(struct sockaddr*)&client,length);
 		while(sentBytes < size){
-			packet[0] = packetNum % 2;
+			//memset(contents, '\0', sizeof(packet));
+			//memset(header, '\0', sizeof(header));
+			//memset(packet, '\0', sizeof(header));
+
+			header[0] = packetNum % 2;
 			if(packetNum < maxSeqNum){
-				packet[1] = 0;
+				header[1] = 0;
 			}else{
-				packet[1] = 1;
+				header[1] = 1;
 			}
-			printf("pack number is: %d and max is: %d\n",packet[0],packet[1]);
-			fread(packet,1,1000,file);
-			//printf("%s\n",packet);
-			sentBytes += sendto(sock,packet,sizeof(packet),0,(struct sockaddr*)&client,length);
+			printf("pack number is: %d and max is: %d\n",header[0],header[1]);
+			fread(contents,1,1000,file);
+			printf("HERE1\n");
+			strcat(packet, header);
+			strcat(packet, contents);
+			printf("HERE2\n");
+			//printf("This is the seq num: %c\n",packet[0]);
+			sentBytes += sendto(sock, packet, sizeof(packet), 0, (struct sockaddr*)&client, length);
 			printf("%d\n", sentBytes);
 			packetNum++;
-			bzero(packet,sizeof(packet));
+			
 		}
 		fclose(file);
 		close(sock);
