@@ -5,13 +5,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 /*Authors: Eric Olson and Roman Claprood
 Project: Lab2 Client/Server UDP with RDT 3.0
 Due Date: November 4, 2015
 */
 
-void getFileName();
+
 void getAndSendFile();
 
 int main(int argc, char *argv[])
@@ -94,5 +95,3 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		printf("\nFile Not Found\n");
 	}
 }
-
-
