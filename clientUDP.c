@@ -59,19 +59,22 @@ int main(int argc, char  *argv[]){
 	}
 
 	char buffer[1048];
-	recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
+	//recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0); //(struct sockaddr*)&server_add, sizeof(server_add)); for responding
 	char newfile[50]="copy";
 	strcat(newfile,argv[3]);
 	FILE* fp = fopen(newfile, "w+");
-
+	time_t t;
+	srand((unsigned)time(&t));
 	/*
 	In the following portion of the code, we continuously receive packets from the server until we see that 
 	the "final packet" flag has been set to true. It is currently set up to write the packet contents to the
 	file even if they are out of order. This can be changed.
 	*/
 	while (endFlag == 0) {
-		recvfrom(sock, buffer, sizeof(buffer), 0, 0, 0);
+		memset(buffer,'\0',1048);
+		recvfrom(sock, buffer, 1048, 0, 0, 0);
 		endFlag = buffer[1] - '0'; //little trick I picked up back in 'nam to get the numerical value of a char
+		printf("%d\n",endFlag);
 		currPack++;
 		r = rand() % 100;
 		if(r > prob) {
