@@ -5,14 +5,17 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
+#include <sys/types.h>
+//#include <systm.h>
 
 /*Authors: Eric Olson and Roman Claprood
 Project: Lab2 Client/Server UDP with RDT 3.0
 Due Date: November 4, 2015
 */
 
-void getFileName();
 void getAndSendFile();
+int RDT = 0;
 
 int main(int argc, char *argv[])
 {
@@ -23,6 +26,13 @@ int main(int argc, char *argv[])
 	memset(request,0,sizeof(request));
 	if (argc < 2){
 		printf("Error, please give a port!\n");
+		exit(1);
+	} else if (argc == 2) {
+		RDT = 0;
+	} else if (argc == 3) {
+		RDT = 1;
+	} else {
+		printf("Too many arguments\n");
 		exit(1);
 	}
 
@@ -57,6 +67,8 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 	char *packet = calloc(1050,sizeof(char));
 	char header[3];
 	char buffer[1001];
+	char Ack[2];
+	int totRetrans = 0;
 	int size,maxSeqNum,sentBytes,packetNum = 0;
 
 	struct stat fsize;
@@ -70,6 +82,7 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		maxSeqNum = size / 1000;
 		
 		sentBytes = 0;
+		clock_t diff, start;
 		//Sends the packets
 		//sendto(sock,"packet",1000,0,(struct sockaddr*)&client,length);
 		while(sentBytes < size){
@@ -89,12 +102,48 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 			strcat(packet,buffer);
 			sentBytes += sendto(sock,packet,1002,0,(struct sockaddr*)&client,length);
 			packetNum++;
+
+			if(RDT == 1) {
+				int packNum = 1;
+				memset(Ack, '\0', 2);
+				int x;
+				//start timer
+				start = clock();
+				diff = clock() - start;
+				int sec = diff / CLOCKS_PER_SEC;
+				while (sec < 5) {
+					x = recvfrom(sock, Ack, sizeof(Ack), MSG_DONTWAIT, (struct sockaddr*)&client, &length);	
+					if (x == 0 || x == -1) {
+						diff = clock() - start;
+						sec = diff / CLOCKS_PER_SEC;
+					} else {
+						if (Ack[0] - '0' == packetNum - 1) {
+							//stop timer;
+							packNum++;
+							break;
+						} else {
+							retran:
+							totRetrans++;
+							printf("Retransmitting packet %d. Total number of ", packNum); 
+							printf("retransmissions thus far: %d\n", totRetrans);
+							sendto(sock,packet,1002,0,(struct sockaddr*)&client,length);
+							//restart timer
+							start = clock();
+							diff = clock() - start;
+							sec = diff / CLOCKS_PER_SEC;
+						}
+					}
+
+				}
+				if (sec >= 5) {
+					goto retran;
+				}
+
+			}
 		}
 		fclose(file);
 		close(sock);
-	}else {
+	} else {
 		printf("\nFile Not Found\n");
 	}
 }
-
-
