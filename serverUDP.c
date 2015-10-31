@@ -69,6 +69,7 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 	char buffer[1001];
 	char Ack[2];
 	int totRetrans = 0;
+	int expected = 0;
 	int size,maxSeqNum,sentBytes,packetNum = 0;
 
 	struct stat fsize;
@@ -82,6 +83,7 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 		maxSeqNum = size / 1000;
 		
 		sentBytes = 0;
+		int packNum = 1;
 		clock_t diff, start;
 		//Sends the packets
 		//sendto(sock,"packet",1000,0,(struct sockaddr*)&client,length);
@@ -104,41 +106,50 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 			packetNum++;
 
 			if(RDT == 1) {
-				int packNum = 1;
+				int flag = 1;
 				memset(Ack, '\0', 2);
 				int x;
 				//start timer
 				start = clock();
 				diff = clock() - start;
 				int sec = diff / CLOCKS_PER_SEC;
-				while (sec < 5) {
-					x = recvfrom(sock, Ack, sizeof(Ack), MSG_DONTWAIT, (struct sockaddr*)&client, &length);	
-					if (x == 0 || x == -1) {
-						diff = clock() - start;
-						sec = diff / CLOCKS_PER_SEC;
-					} else {
-						if (Ack[0] - '0' == packetNum - 1) {
-							//stop timer;
-							packNum++;
-							break;
-						} else {
-							retran:
-							totRetrans++;
-							printf("Retransmitting packet %d. Total number of ", packNum); 
-							printf("retransmissions thus far: %d\n", totRetrans);
-							sendto(sock,packet,1002,0,(struct sockaddr*)&client,length);
-							//restart timer
-							start = clock();
+				while (flag) {
+					if(sec < 5){
+						x = recvfrom(sock, Ack, sizeof(Ack), MSG_DONTWAIT, (struct sockaddr*)&client, &length);	
+						if (x == 0 || x == -1) {
 							diff = clock() - start;
 							sec = diff / CLOCKS_PER_SEC;
+						} else {
+							if (Ack[0] - '0' == expected) {
+								printf("Expected ACK\n");
+								expected = (expected + 1) % 2;
+								flag = 0;
+								//stop timer;
+								packNum++;
+							} else {
+								printf("UNEXPECTED ACK!!\n");
+								totRetrans++;
+								printf("Retransmitting packet %d. Total number of ", packNum); 
+								printf("retransmissions thus far: %d\n", totRetrans);
+								sendto(sock,packet,1002,0,(struct sockaddr*)&client,length);
+								//restart timer
+								start = clock();
+								diff = clock() - start;
+								sec = diff / CLOCKS_PER_SEC;
+							}
 						}
+					}else{
+						printf("TIMEOUT REACHED!!!\n");
+						totRetrans++;
+						printf("Retransmitting packet %d. Total number of ", packNum); 
+						printf("retransmissions thus far: %d\n", totRetrans);
+						sendto(sock,packet,1002,0,(struct sockaddr*)&client,length);
+						//restart timer
+						start = clock();
+						diff = clock() - start;
+						sec = diff / CLOCKS_PER_SEC;
 					}
-
 				}
-				if (sec >= 5) {
-					goto retran;
-				}
-
 			}
 		}
 		fclose(file);

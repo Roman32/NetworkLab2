@@ -17,8 +17,10 @@ Due Date: November 4, 2015
 void RDTSend();
 void RegularSend();
 
+int prob;
+
 int main(int argc, char  *argv[]){
-	int sock, portNum, prob, connection;
+	int sock, portNum, connection;
 	int packCount = 0;
 	int endFlag = 0;
 	int currPack = 0;
@@ -100,6 +102,10 @@ int main(int argc, char  *argv[]){
 			expected = (expected + 1) % 2;
 		} else {
 				printf("Packet %d dropped.\n", currPack);
+				currPack--;
+				if(endFlag == 1){
+					endFlag = 0;
+				}
 		}
 	}
 
@@ -113,26 +119,39 @@ int main(int argc, char  *argv[]){
 
 void RDTSend(char buffer[], int* expected, char Ack[], int* currPack, FILE* fp, int* sock) {
 	int i;
+	int r;
 	if (buffer[0] - '0' == *expected) {
 		for (i = 2; i < strlen(buffer); i++) {
 			putc(buffer[i], fp);
 		} 
 		Ack[0] = *expected + '0';
 		//send the ack
-		if(write(*sock, Ack, strlen(Ack)) < 0){
-	 	printf("Error writing to socket");
-	 	exit(0);
-	}
+		//r = rand() % 100;
+		//if (r > prob){ 
+			printf("ACK SUCCESS!\n");
+			if(write(*sock, Ack, strlen(Ack)) < 0){
+			 	printf("Error writing to socket");
+			 	exit(0);
+			}	
+	 	//}
 	} else {
 		Ack[0] = ((*expected - 1) % 2) + '0';
 		//send Ack 
-		if(write(*sock, Ack, strlen(Ack)) < 0){
-	 	printf("Error writing to socket");
-	 	exit(0);
-	} 
+		//r = rand() % 100;
+		//if(r > prob){
+			printf("ACK SUCESS FOR DUP!\n");
+			if(write(*sock, Ack, strlen(Ack)) < 0){
+			 	printf("Error writing to socket");
+			 	exit(0);
+			} 
+		//}else{
+			//*expected = (*expected -1) % 2;
+		//}
 		*currPack = *currPack - 1;
 	}
 }
+
+
 void RegularSend(char buffer[], FILE* fp) {
 	int i;
 	for (i = 2; i < strlen(buffer); i++) {
