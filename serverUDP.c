@@ -71,6 +71,7 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 	int totRetrans = 0;
 	int expected = 0;
 	int size,maxSeqNum,sentBytes,packetNum = 0;
+	int killSwitch = 0;
 
 	struct stat fsize;
 	
@@ -114,6 +115,10 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 				diff = clock() - start;
 				int sec = diff / CLOCKS_PER_SEC;
 				while (flag) {
+					if (packet[1] == '1' && killSwitch >= 10) {
+						printf("Receiver termination detected. Terminating Sender.\n");
+						exit(1);
+					}
 					if(sec < 5){
 						x = recvfrom(sock, Ack, sizeof(Ack), MSG_DONTWAIT, (struct sockaddr*)&client, &length);	
 						if (x == 0 || x == -1) {
@@ -121,13 +126,14 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 							sec = diff / CLOCKS_PER_SEC;
 						} else {
 							if (Ack[0] - '0' == expected) {
-								printf("Expected ACK\n");
+								printf("Expected ACK %d message received in sender\n", Ack[0]-'0');
 								expected = (expected + 1) % 2;
 								flag = 0;
+								killSwitch = 0;
 								//stop timer;
 								packNum++;
 							} else {
-								printf("UNEXPECTED ACK!!\n");
+								printf("Unexpected Ack message %d received in sender\n", Ack[0]-'0');
 								totRetrans++;
 								printf("Retransmitting packet %d. Total number of ", packNum); 
 								printf("retransmissions thus far: %d\n", totRetrans);
@@ -136,10 +142,11 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 								start = clock();
 								diff = clock() - start;
 								sec = diff / CLOCKS_PER_SEC;
+								killSwitch++;
 							}
 						}
 					}else{
-						printf("TIMEOUT REACHED!!!\n");
+						printf("\tTIMEOUT REACHED!!!\n");
 						totRetrans++;
 						printf("Retransmitting packet %d. Total number of ", packNum); 
 						printf("retransmissions thus far: %d\n", totRetrans);
@@ -148,6 +155,7 @@ void getAndSendFile(int sock,char filename[],struct sockaddr_in client,socklen_t
 						start = clock();
 						diff = clock() - start;
 						sec = diff / CLOCKS_PER_SEC;
+						killSwitch++;
 					}
 				}
 			}

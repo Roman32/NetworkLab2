@@ -93,7 +93,7 @@ int main(int argc, char  *argv[]){
 		r = rand() % 100;
 		if(r > prob) {
 			packCount++;
-			printf("Packet %d accepted.\n", currPack);
+			printf("Packet %d accepted in receiver.\n", currPack);
 			if (RDT == 1) {
 				RDTSend(buffer, &expected, Ack, &currPack, fp, &sock);
 			} else if (RDT == 0) {
@@ -101,7 +101,7 @@ int main(int argc, char  *argv[]){
 			}
 			expected = (expected + 1) % 2;
 		} else {
-				printf("Packet %d dropped.\n", currPack);
+				printf("Packet %d dropped in receiver.\n", currPack);
 				currPack--;
 				if(endFlag == 1){
 					endFlag = 0;
@@ -121,32 +121,37 @@ void RDTSend(char buffer[], int* expected, char Ack[], int* currPack, FILE* fp, 
 	int i;
 	int r;
 	if (buffer[0] - '0' == *expected) {
+		printf("Received expected packet in receiver.\n");
 		for (i = 2; i < strlen(buffer); i++) {
 			putc(buffer[i], fp);
 		} 
 		Ack[0] = *expected + '0';
 		//send the ack
-		//r = rand() % 100;
-		//if (r > prob){ 
-			printf("ACK SUCCESS!\n");
+		r = rand() % 100;
+		if (r > prob){ 
+			printf("Sucessfully sent Ack for expected packet receipt\n");
 			if(write(*sock, Ack, strlen(Ack)) < 0){
 			 	printf("Error writing to socket");
 			 	exit(0);
 			}	
-	 	//}
+	 	} else {
+	 		printf("Failed to send ACK for expected packet.\n");
+	 	}
 	} else {
+		printf("Received unexpected packet in receiver.\n");
 		Ack[0] = ((*expected - 1) % 2) + '0';
 		//send Ack 
-		//r = rand() % 100;
-		//if(r > prob){
-			printf("ACK SUCESS FOR DUP!\n");
+		r = rand() % 100;
+		if(r > prob){
+			printf("Succesfully sent ACK for signifying duplicate packet receipt\n");
 			if(write(*sock, Ack, strlen(Ack)) < 0){
 			 	printf("Error writing to socket");
 			 	exit(0);
 			} 
-		//}else{
-			//*expected = (*expected -1) % 2;
-		//}
+		}else{
+			printf("Failed to send Ack for unexpected packet.\n");	
+		}
+		*expected = (*expected -1) % 2;
 		*currPack = *currPack - 1;
 	}
 }
