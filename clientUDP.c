@@ -85,17 +85,22 @@ int main(int argc, char  *argv[]){
 	file even if they are out of order. This can be changed.
 	*/
 	while (endFlag == 0) {
+		printf("Here1\n");
 		memset(buffer,'\0',1048);
 		memset(Ack, '\0', 2);
 		recvfrom(sock, buffer, 1048, 0, 0, 0);
 		endFlag = buffer[1] - '0'; 
 		currPack++;
+
 		r = rand() % 100;
 		if(r > prob) {
-			packCount++;
+			printf("R: %d\n", r);
+			if(packCount < currPack) {
+				packCount++;
+			}
 			printf("Packet %d accepted in receiver.\n", currPack);
 			if (RDT == 1) {
-				RDTSend(buffer, &expected, Ack, &currPack, fp, &sock);
+				RDTSend(buffer, &expected, Ack, &currPack, fp, &sock, &packCount);
 			} else if (RDT == 0) {
 				RegularSend(buffer, fp);
 			}
@@ -103,7 +108,15 @@ int main(int argc, char  *argv[]){
 		} else {
 				printf("Packet %d dropped in receiver.\n", currPack);
 				currPack--;
-				if(endFlag == 1){
+				if (RDT == 0) {
+					if (buffer[1] == '1') {
+						endFlag = 1;
+						printf("Quit\n");
+						currPack--; currPack--;
+					}
+					currPack++; currPack++;
+				}
+				else if(endFlag == 1){
 					endFlag = 0;
 				}
 		}
@@ -139,7 +152,10 @@ void RDTSend(char buffer[], int* expected, char Ack[], int* currPack, FILE* fp, 
 	 	}
 	} else {
 		printf("Received unexpected packet in receiver.\n");
-		Ack[0] = ((*expected - 1) % 2) + '0';
+		Ack[0] = ((*expected + 1) % 2) + '0';
+		//if (Ack[0] - '0' == -1) {
+		//	Ack[0] = '0';
+		//}
 		//send Ack 
 		r = rand() % 100;
 		if(r > prob){
@@ -151,7 +167,7 @@ void RDTSend(char buffer[], int* expected, char Ack[], int* currPack, FILE* fp, 
 		}else{
 			printf("Failed to send Ack for unexpected packet.\n");	
 		}
-		*expected = (*expected -1) % 2;
+		*expected = (*expected +1) % 2;
 		*currPack = *currPack - 1;
 	}
 }
